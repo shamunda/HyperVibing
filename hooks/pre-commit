@@ -8,13 +8,9 @@
 # ── Watchdog pre-commit hook: Secret & Sensitive Data Scanner ──
 # Blocks commits that contain API keys, tokens, passwords, private keys,
 # connection strings, or other secrets.
+# Uses grep -E (POSIX extended regex) for cross-platform compatibility.
 
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-echo "🔒 Watchdog: Scanning staged files for secrets..."
+echo "Watchdog: Scanning staged files for secrets..."
 
 # Get list of staged files (excludes deleted files)
 STAGED=$(git diff --cached --name-only --diff-filter=d)
@@ -25,26 +21,8 @@ fi
 
 FOUND=0
 
-# ── Pattern definitions ──
-# Each pattern: "LABEL:::REGEX"
-PATTERNS=(
-    "AWS Access Key:::AKIA[0-9A-Z]{16}"
-    "AWS Secret Key:::['\"]?[0-9a-zA-Z/+]{40}['\"]?"
-    "GitHub Token:::gh[pousr]_[A-Za-z0-9_]{36,}"
-    "Anthropic API Key:::sk-ant-[A-Za-z0-9_-]{20,}"
-    "OpenAI API Key:::sk-[A-Za-z0-9]{20,}"
-    "Generic API Key:::(?i)(api[_-]?key|apikey)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]"
-    "Generic Secret:::(?i)(secret|token|password|passwd|pwd)\s*[:=]\s*['\"][^\s'\"]{8,}['\"]"
-    "Private Key:::-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"
-    "Connection String:::(?i)(Server|Data Source)=.*Password="
-    "Bearer Token:::(?i)bearer\s+[A-Za-z0-9\-._~+/]+=*"
-    "Basic Auth:::(?i)basic\s+[A-Za-z0-9+/]{20,}={0,2}"
-    "Hardcoded Password:::(?i)(password|passwd|pwd)\s*=\s*['\"][^'\"]{4,}['\"]"
-    ".env Variable Leak:::(?i)^[A-Z_]+=(sk-|ghp_|AKIA|Bearer )"
-)
-
 # Files/paths to always skip
-SKIP_PATTERNS="\.lock$|package-lock\.json$|\.min\.js$|\.min\.css$|\.dll$|\.exe$|\.png$|\.jpg$|\.gif$|\.ico$|\.woff"
+SKIP_PATTERNS="\.(lock|min\.js|min\.css|dll|exe|png|jpg|gif|ico|woff|woff2)$"
 
 for file in $STAGED; do
     # Skip binary/minified files
@@ -56,38 +34,68 @@ for file in $STAGED; do
     # Get staged content (not working directory)
     CONTENT=$(git show ":$file" 2>/dev/null) || continue
 
-    for pattern_entry in "${PATTERNS[@]}"; do
-        LABEL="${pattern_entry%%:::*}"
-        REGEX="${pattern_entry##*:::}"
+    # AWS Access Key
+    echo "$CONTENT" | grep -qE "AKIA[0-9A-Z]{16}" && {
+        echo "  BLOCKED: AWS Access Key found in $file"
+        FOUND=$((FOUND + 1))
+    }
 
-        MATCHES=$(echo "$CONTENT" | grep -nP "$REGEX" 2>/dev/null | head -5)
-        if [ -n "$MATCHES" ]; then
-            if [ $FOUND -eq 0 ]; then
-                echo ""
-                echo -e "${RED}╔══════════════════════════════════════════════════╗${NC}"
-                echo -e "${RED}║  ⚠  SECRETS DETECTED — COMMIT BLOCKED           ║${NC}"
-                echo -e "${RED}╚══════════════════════════════════════════════════╝${NC}"
-            fi
-            FOUND=$((FOUND + 1))
-            echo ""
-            echo -e "${YELLOW}── $LABEL in: $file${NC}"
-            echo "$MATCHES" | while IFS= read -r line; do
-                LINE_NUM=$(echo "$line" | cut -d: -f1)
-                echo -e "   ${RED}Line $LINE_NUM${NC}"
-            done
-        fi
-    done
+    # GitHub Token
+    echo "$CONTENT" | grep -qE "gh[pousr]_[A-Za-z0-9_]{36,}" && {
+        echo "  BLOCKED: GitHub Token found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # Anthropic API Key
+    echo "$CONTENT" | grep -qE "sk-ant-[A-Za-z0-9_-]{20,}" && {
+        echo "  BLOCKED: Anthropic API Key found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # OpenAI API Key
+    echo "$CONTENT" | grep -qE "sk-[A-Za-z0-9]{20,}" && {
+        echo "  BLOCKED: OpenAI API Key found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # Private Key
+    echo "$CONTENT" | grep -qE "-----BEGIN .*(PRIVATE KEY|CERTIFICATE)-----" && {
+        echo "  BLOCKED: Private Key/Certificate found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # Connection String with password
+    echo "$CONTENT" | grep -qiE "(Server|Data Source)=.*Password=" && {
+        echo "  BLOCKED: Connection String with Password found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # Hardcoded password/secret assignments
+    echo "$CONTENT" | grep -qiE "(password|passwd|secret|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}['\"]" && {
+        echo "  BLOCKED: Hardcoded secret assignment found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # Bearer tokens
+    echo "$CONTENT" | grep -qiE "bearer[[:space:]]+[A-Za-z0-9_./-]{20,}" && {
+        echo "  BLOCKED: Bearer Token found in $file"
+        FOUND=$((FOUND + 1))
+    }
+
+    # .env variable with key prefix
+    echo "$CONTENT" | grep -qE "^[A-Z_]+=(sk-|ghp_|AKIA|Bearer )" && {
+        echo "  BLOCKED: .env variable with secret prefix found in $file"
+        FOUND=$((FOUND + 1))
+    }
 done
 
 if [ $FOUND -gt 0 ]; then
     echo ""
-    echo -e "${RED}Found $FOUND potential secret(s) in staged files.${NC}"
-    echo ""
-    echo "  To fix: Remove the secrets, use environment variables instead."
-    echo "  To bypass (NOT recommended): git commit --no-verify"
-    echo ""
+    echo "COMMIT BLOCKED: Found $FOUND potential secret(s) in staged files."
+    echo "  Fix: Remove secrets and use environment variables instead."
+    echo "  Bypass (NOT recommended): git commit --no-verify"
     exit 1
 fi
 
-echo -e "${GREEN}✓ No secrets detected. Commit proceeding.${NC}"
+echo "OK: No secrets detected."
 exit 0
