@@ -1,0 +1,19 @@
+# .NET build output
+bin/
+obj/
+
+# Watchdog runtime data — never commit
+data/
+*.lock
+
+# Environment
+.env
+.env.local
+
+# Visual Studio
+.vs/
+*.user
+
+# OS
+.DS_Store
+Thumbs.db

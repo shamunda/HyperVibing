@@ -1,0 +1,15 @@
+{
+  "stall_threshold_seconds": 60,
+  "urgency_threshold": 0.40,
+  "session_budget": 5,
+  "reflection_window_minutes": 5,
+  "relay_baton_max_age_hours": 8,
+  "safety_rules": [
+    "destructive_command",
+    "secret_in_code",
+    "force_push"
+  ],
+  "default_preset": "solo-coder",
+  "auto_loop_enabled": true,
+  "auto_loop_interval_seconds": 30
+}

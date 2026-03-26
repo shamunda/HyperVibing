@@ -1,0 +1,217 @@
+Here it is — the full architecture plan:
+
+  ---
+  Watchdog Autonomous Agent — Architecture & Implementation Plan
+
+  What We're Actually Building
+
+  Watchdog's unique constraint changes everything: the Supervisor cannot control project agents — it can only influence
+  them through a file-based inject channel. This makes Watchdog architecturally closer to a strategic advisor than a
+  typical supervisor/worker framework. No existing open-source agent framework (LangGraph, CrewAI, AutoGPT) is designed
+  around this constraint. This is novel territory.
+
+  ---
+  System Architecture
+
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │                     WATCHDOG SUPERVISOR AGENT                        │
+  │         (Claude Sonnet — long-context, tool-using, persistent)       │
+  │                                                                       │
+  │  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────────┐  │
+  │  │  WORKING MEMORY  │  │  EPISODIC STORE  │  │  SEMANTIC STORE    │  │
+  │  │  (context window)│  │  (JSONL ledger)  │  │  (dev-profile +    │  │
+  │  │                  │  │                  │  │   strategy table)  │  │
+  │  └────────┬─────────┘  └────────┬─────────┘  └────────┬───────────┘  │
+  │           └─────────────────────┴─────────────────────┘              │
+  │                                 │                                    │
+  │                    ┌────────────▼────────────┐                       │
+  │                    │   REASONING ENGINE       │                       │
+  │                    │   (ReAct loop with       │                       │
+  │                    │    deliberative pause)   │                       │
+  │                    └────────────┬────────────┘                       │
+  │            ┌────────────────────┼────────────────────┐               │
+  │   ┌────────▼───────┐  ┌────────▼───────┐  ┌────────▼───────┐       │
+  │   │  OBSERVER TOOL │  │ INTERVENTION   │  │  SELF-IMPROVE  │       │
+  │   │  SUITE         │  │ TOOL SUITE     │  │  TOOL SUITE    │       │
+  │   └────────────────┘  └────────────────┘  └────────────────┘       │
+  └───────────────────────────────┬──────────────────────────────────────┘
+                                  │
+            ┌─────────────────────┼─────────────────────┐
+     ┌──────▼──────┐     ┌───────▼──────┐    ┌─────────▼────┐
+     │  LUMICOIN   │     │  PROJECT B   │    │  PROJECT N   │
+     │  AGENT      │     │  AGENT       │    │  AGENT       │
+     │  Hook Sink  │     │  Hook Sink   │    │  Hook Sink   │
+     └─────────────┘     └──────────────┘    └──────────────┘
+
+    ══► Supervisor → Project: mailbox inject (PreToolUse)
+    ──► Project → Supervisor: stream.jsonl (PostToolUse)
+    ~~► Supervisor → Itself: episodic ledger (cross-session)
+
+  ---
+  The Reasoning Loop (Replaces watch.ps1)
+
+  Not a poll — a Deliberative ReAct loop:
+
+  1. PERCEIVE    — consume new stream events since cursor
+  2. TRIAGE      — compute urgency score per project; skip if below threshold
+  3. DELIBERATE  — load episodic context; hypothesize; predict nudge effectiveness
+  4. ACT         — choose intervention tier; execute; record rationale
+  5. REFLECT     — 5 min later: did the project agent resume? Update strategy scores
+
+  The deliberative pause is critical. Constant nudging is worse than none. An urgency function gates every intervention:
+
+  urgency = f(stall_seconds, completion_pct, intervention_budget_remaining, strategy_effectiveness)
+
+  If the budget for this session is spent, Watchdog backs off rather than nagging.
+
+  ---
+  Action Space (5 Tiers)
+
+  ┌───────────────┬────────────────────────────────────────────────────────────────┬────────────────────────────────┐
+  │     Tier      │                            Actions                             │              When              │
+  ├───────────────┼────────────────────────────────────────────────────────────────┼────────────────────────────────┤
+  │ 0 — Observe   │ read_stream, read_transcript, check_nudge_ack,                 │ Always safe                    │
+  │               │ query_episodic_store                                           │                                │
+  ├───────────────┼────────────────────────────────────────────────────────────────┼────────────────────────────────┤
+  │ 1 — Soft      │ nudge_contextual(tone), inject_context(artifact)               │ Routine incomplete work        │
+  ├───────────────┼────────────────────────────────────────────────────────────────┼────────────────────────────────┤
+  │ 2 —           │ update_claude_md, install_checkpoint_hook, spawn_subagent      │ Persistent bad patterns        │
+  │ Structural    │                                                                │                                │
+  ├───────────────┼────────────────────────────────────────────────────────────────┼────────────────────────────────┤
+  │ 3 — Hard      │ write_safety_block, declare_stuck, cross_project_alert         │ Safety violations, stuck       │
+  │               │                                                                │ sessions                       │
+  └───────────────┴────────────────────────────────────────────────────────────────┴────────────────────────────────┘
+
+  spawn_subagent is the big new capability — Watchdog can commission fresh work (run tests, check build status, diff
+  analysis) without polluting the project agent's context. It launches a bounded claude --dangerously-skip-permissions
+  process, captures output to a shared mailbox, and returns a job ID.
+
+  ---
+  Memory Architecture (4 Layers)
+
+  Layer 1 — Working Memory: current context window. Holds live perception snapshot + last 3 episodic summaries for the
+  active project. Lost on session end — that's fine, all conclusions commit downward.
+
+  Layer 2 — Episodic Memory: data/episodes/<project>/YYYY-MM-DD.jsonl. Every intervention logged with full rationale:
+  {
+    "trigger": { "type": "gap_detected", "urgency_score": 0.73 },
+    "deliberation_summary": "Matches 'analysis paralysis' pattern from 2026-03-18",
+    "action_taken": { "tier": 1, "tool": "nudge_contextual", "tone": "redirect" },
+    "outcome": { "tool_activity_resumed": true, "effective": true },
+    "lessons": ["redirect > reminder for analysis-paralysis in Lumicoin"]
+  }
+
+  Layer 3 — Semantic Memory: data/developer-profile.md grows into a living knowledge base with per-project strategy
+  effectiveness tables:
+  | strategy     | Lumicoin | Global |
+  |-------------|----------|--------|
+  | redirect     | 0.82     | 0.71   |
+  | reminder     | 0.44     | 0.58   |
+  | escalation   | 0.91     | 0.88   |
+
+  Layer 4 — Procedural Memory: the skills/ scripts themselves. Self-improvement can propose new skills to
+  actions/pending/ — but never auto-execute. Human-gated permanently.
+
+  ---
+  Agent-to-Agent Communication: Shared Mailbox Protocol (SMP)
+
+  Replaces the single .watchdog-nudge.md file with a proper protocol:
+
+  ~/.watchdog/mailboxes/<project>/
+    inbox/    ← Supervisor writes messages (priority-queued)
+    outbox/   ← Project agent writes acknowledgments
+    dead-letter/ ← Expired unacknowledged messages
+
+  Each message has: msg_id, priority (low/normal/high/critical), type (nudge/query/directive/alert), requires_ack,
+  expires_at.
+
+  The PreToolUse hook injects the highest-priority unread message and acks it. The Supervisor polls the outbox — if a
+  message expires unacknowledged it goes to dead-letter and Watchdog knows the injection failed (project was idle or
+  hook broke).
+
+  This solves three bugs in the current single-file approach: no message identity, no priority, and a second nudge
+  overwrites the first.
+
+  ---
+  Self-Improvement (3 Grounded Mechanisms)
+
+  1. Strategy Outcome Tracking — 5 minutes after every nudge, check if tool activity resumed. Positive/negative score
+  updates the strategy effectiveness table. This is real empirical reward, not simulated.
+
+  2. Developer Correction Learning — detect correction signals (keywords like "stop/wrong/ignore that", or rm
+  .watchdog-nudge.md as the very next action after injection). 3+ consistent signals → auto-update semantic memory.
+  Procedural changes always go to actions/pending/.
+
+  3. Pattern Crystallization — daily batch: group episodes by trigger + strategy + outcome. If a statistically
+  meaningful pattern emerges (≥5 data points, ≥20% delta from current table), propose a semantic memory update. Surfaced
+   in /status and /self-report.
+
+  What this is NOT: no autonomous prompt rewriting, no self-retraining, no executing self-generated code.
+
+  ---
+  Implementation Phases
+
+  ┌───────┬────────────────────────┬───────────┬────────────────────────────────────────────────────────────────────┐
+  │ Phase │         Focus          │ Duration  │                          Key Deliverable                           │
+  ├───────┼────────────────────────┼───────────┼────────────────────────────────────────────────────────────────────┤
+  │ 1     │ Robust Observation     │ Weeks 1–2 │ Episodic store, session cursors, SMP ack protocol                  │
+  ├───────┼────────────────────────┼───────────┼────────────────────────────────────────────────────────────────────┤
+  │ 2     │ Deliberative Loop      │ Weeks 3–4 │ Urgency scoring, intervention budget, strategy selection,          │
+  │       │                        │           │ event-driven trigger                                               │
+  ├───────┼────────────────────────┼───────────┼────────────────────────────────────────────────────────────────────┤
+  │ 3     │ Memory Integration     │ Weeks 5–6 │ Outcome tracking, semantic memory updates, query_episodic_store,   │
+  │       │                        │           │ compact_memory                                                     │
+  ├───────┼────────────────────────┼───────────┼────────────────────────────────────────────────────────────────────┤
+  │ 4     │ Multi-Agent            │ Weeks 7–8 │ Full SMP, spawn_subagent, cross_project_alert, concurrent project  │
+  │       │ Coordination           │           │ monitoring                                                         │
+  ├───────┼────────────────────────┼───────────┼────────────────────────────────────────────────────────────────────┤
+  │ 5     │ Self-Improvement       │ Weeks     │ Pattern crystallization, correction detection, /self-report,       │
+  │       │                        │ 9–12      │ meta-cognition step                                                │
+  └───────┴────────────────────────┴───────────┴────────────────────────────────────────────────────────────────────┘
+
+  ---
+  Key Technical Decisions
+
+  ┌────────────────────────────┬────────────────────────────────────────────────────────────────────────────────────┐
+  │          Decision          │                                   Justification                                    │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ Stay in Claude Code, not a │ Zero new runtimes. No Python server. The Claude Code binary already provides:      │
+  │  custom runtime            │ long-context reasoning, tool execution, hook injection, session persistence.       │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ ReAct with auditable       │ Every reasoning trace written to episodic store. Watchdog's decisions are          │
+  │ deliberation records       │ inspectable, not a black box.                                                      │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ File-based mailbox over    │ Crash-safe, no startup coordination required. 5-second latency is irrelevant at    │
+  │ sockets/pipes              │ Watchdog's timescale.                                                              │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ Haiku for scoring, Sonnet  │ Haiku handles the classification task (completion scoring). Sonnet handles         │
+  │ for deliberation           │ strategic reasoning. Cost-appropriate.                                             │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ No vector DB until Phase   │ Corpus will be hundreds of episodes, not thousands, for months. Keyword search     │
+  │ 5+                         │ over 500-char summaries is sufficient and avoids Python dependency.                │
+  ├────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┤
+  │ Human-gated procedural     │ Scripts that run shell commands must be reviewed. The cost of a human reading a    │
+  │ memory                     │ diff is trivial; the risk of auto-executing a malformed script is not.             │
+  └────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────┘
+
+  ---
+  What Makes This Novel
+
+  Every existing agent framework assumes the Supervisor controls its workers — it spawns them, calls them, receives
+  their outputs, terminates them. Watchdog cannot do any of that. It has only an asymmetric influence channel: a file it
+   writes that the project agent may or may not read on its next tool call.
+
+  This forces a genuinely different design: reasoning about influence, not control. The Supervisor must model likely
+  project agent responses, track whether they materialized, and learn which interventions work for this developer on
+  this project. The combination of:
+
+  - Asymmetric influence channel
+  - Intervention budget with urgency gating
+  - Empirical outcome tracking (causal, not simulated)
+  - Strategy effectiveness memory per-project
+
+  ...is not replicated in any current framework. It emerges directly from the constraints of the Claude Code hook
+  architecture applied to the developer productivity oversight problem.
+
+  ---
+  Ready to start Phase 1 when you are.
