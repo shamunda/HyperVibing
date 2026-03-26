@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────
+// Watchdog — Claude Code Supervisor Agent
+// Author: Dennis "Shamunda" Ross
+// Date:   March 2026
+// MCP server that monitors and supervises Claude Code sessions.
+// ─────────────────────────────────────────────────────────────────
 using System.Text.RegularExpressions;
 using Watchdog.Server.Lib;
 using Watchdog.Server.Models;

@@ -10,6 +10,13 @@
     system reminder before executing the tool.
     Exits 0 always (never blocks tools).
 #>
+# ──────────────────────────────────────────────────────────────────
+# Watchdog — Claude Code Supervisor Agent
+# Author: Dennis "Shamunda" Ross
+# Date:   March 2026
+# MCP server that monitors and supervises Claude Code sessions.
+# ──────────────────────────────────────────────────────────────────
+
 
 $ErrorActionPreference = 'SilentlyContinue'
 

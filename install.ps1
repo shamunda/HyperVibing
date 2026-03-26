@@ -13,6 +13,13 @@
       5. Registers the MCP server in ~/.claude/mcp.json
       6. Prints next steps
 #>
+# ──────────────────────────────────────────────────────────────────
+# Watchdog — Claude Code Supervisor Agent
+# Author: Dennis "Shamunda" Ross
+# Date:   March 2026
+# MCP server that monitors and supervises Claude Code sessions.
+# ──────────────────────────────────────────────────────────────────
+
 #Requires -Version 5.1
 
 $ErrorActionPreference = 'Stop'

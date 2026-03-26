@@ -1,4 +1,10 @@
 #!/bin/sh
+# ──────────────────────────────────────────────────────────────────
+# Watchdog — Claude Code Supervisor Agent
+# Author: Dennis "Shamunda" Ross
+# Date:   March 2026
+# MCP server that monitors and supervises Claude Code sessions.
+# ──────────────────────────────────────────────────────────────────
 # ── Watchdog pre-commit hook: Secret & Sensitive Data Scanner ──
 # Blocks commits that contain API keys, tokens, passwords, private keys,
 # connection strings, or other secrets.

@@ -7,6 +7,13 @@
     Runs silently after every tool call in a monitored project.
     Any failure exits 0 — never disrupts the project agent.
 #>
+# ──────────────────────────────────────────────────────────────────
+# Watchdog — Claude Code Supervisor Agent
+# Author: Dennis "Shamunda" Ross
+# Date:   March 2026
+# MCP server that monitors and supervises Claude Code sessions.
+# ──────────────────────────────────────────────────────────────────
+
 
 $ErrorActionPreference = 'SilentlyContinue'
 

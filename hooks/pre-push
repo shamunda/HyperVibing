@@ -1,4 +1,10 @@
 #!/bin/sh
+# ──────────────────────────────────────────────────────────────────
+# Watchdog — Claude Code Supervisor Agent
+# Author: Dennis "Shamunda" Ross
+# Date:   March 2026
+# MCP server that monitors and supervises Claude Code sessions.
+# ──────────────────────────────────────────────────────────────────
 # ── Watchdog pre-push hook: Final safety gate before publishing ──
 # Runs the same secret scan as pre-commit, plus checks for:
 #   - Accidental pushes of PrivateDocs content
