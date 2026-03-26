@@ -14,6 +14,12 @@ data/
 .vs/
 *.user
 
+# IDE
+.vscode/
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Private / non-release files
+PrivateDocs/
