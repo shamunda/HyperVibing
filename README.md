@@ -75,4 +75,4 @@ Settings live in `~/.watchdog/config/settings.json`:
 
 ## License
 
-MIT
+MIT License — Copyright (c) 2026 Lumiotic, Inc. See [LICENSE](LICENSE) for details.
