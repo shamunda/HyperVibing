@@ -88,6 +88,33 @@ function Copy-Hooks ($psExe) {
     Write-Ok "Hooks installed to $hooksDest (using $psExe)"
 }
 
+# ── Step 3b: Install git hooks (pre-commit, pre-push) ──────────────────────
+
+function Install-GitHooks {
+    Write-Step 'Installing git safety hooks...'
+
+    $gitDir = Join-Path $PkgRoot '.git'
+    if (-not (Test-Path $gitDir)) {
+        Write-Warn 'Not a git repository — skipping git hook install.'
+        Write-Warn 'Run "git init" then re-run install.ps1 to enable secret scanning.'
+        return
+    }
+
+    $gitHooksDir = Join-Path $gitDir 'hooks'
+    New-Item -ItemType Directory -Path $gitHooksDir -Force | Out-Null
+
+    $hooksSource = Join-Path $PkgRoot 'hooks'
+
+    foreach ($hook in @('pre-commit', 'pre-push')) {
+        $src = Join-Path $hooksSource $hook
+        $dst = Join-Path $gitHooksDir $hook
+        if (Test-Path $src) {
+            Copy-Item $src -Destination $dst -Force
+            Write-Ok "Git $hook hook installed"
+        }
+    }
+}
+
 # ── Step 4: Copy default config (preserve existing) ───────────────────────
 
 function Copy-Config {
@@ -187,6 +214,8 @@ Write-Hr
 Publish-Server
 Write-Hr
 Copy-Hooks $psExe
+Write-Hr
+Install-GitHooks
 Write-Hr
 Copy-Config
 Write-Hr

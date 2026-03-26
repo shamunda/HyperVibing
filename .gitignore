@@ -9,6 +9,16 @@ data/
 # Environment
 .env
 .env.local
+.env.*
+
+# Secrets & keys — never commit
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+id_ed25519*
+*.credentials
 
 # Visual Studio
 .vs/
