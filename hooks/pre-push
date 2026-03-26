@@ -59,7 +59,7 @@ while read local_ref local_sha remote_ref remote_sha; do
             echo "  BLOCKED: OpenAI API Key in $file"
             FOUND=$((FOUND + 1))
         }
-        echo "$CONTENT" | grep -qE "-----BEGIN .*(PRIVATE KEY|CERTIFICATE)-----" && {
+        echo "$CONTENT" | grep -qE -- "-----BEGIN .*(PRIVATE KEY|CERTIFICATE)-----" && {
             echo "  BLOCKED: Private Key/Certificate in $file"
             FOUND=$((FOUND + 1))
         }

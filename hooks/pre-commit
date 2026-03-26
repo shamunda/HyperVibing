@@ -59,7 +59,7 @@ for file in $STAGED; do
     }
 
     # Private Key
-    echo "$CONTENT" | grep -qE "-----BEGIN .*(PRIVATE KEY|CERTIFICATE)-----" && {
+    echo "$CONTENT" | grep -qE -- "-----BEGIN .*(PRIVATE KEY|CERTIFICATE)-----" && {
         echo "  BLOCKED: Private Key/Certificate found in $file"
         FOUND=$((FOUND + 1))
     }
