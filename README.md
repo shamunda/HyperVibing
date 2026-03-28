@@ -26,8 +26,10 @@ An MCP server that monitors and supervises Claude Code sessions. Watchdog runs i
 
 ### Install
 
+Clone the current upstream repository and run the installer:
+
 ```powershell
-git clone https://github.com/LumiLabs/HyperVibing.git
+git clone https://github.com/shamunda/HyperVibing.git
 cd HyperVibing
 .\install.ps1
 ```
