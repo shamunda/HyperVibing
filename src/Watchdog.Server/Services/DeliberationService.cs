@@ -55,12 +55,51 @@ public class DeliberationService(
 
     private DeliberationDecision Deliberate(ProjectStatus status, WatchdogSettings settings)
     {
+        if (status.Workflow is { Stage: WorkflowStage.Escalate } workflowEscalate)
+        {
+            return new DeliberationDecision(
+                Project:         status.Name,
+                Action:          DeliberationAction.Nudge,
+                Reason:          workflowEscalate.Summary,
+                UrgencyScore:    1.0,
+                SuggestedTone:   "escalation",
+                BudgetRemaining: budgetService.Remaining,
+                StrategyScore:   null,
+                StallSeconds:    status.SecondsSinceLastEvent ?? 0,
+                WorkflowStage:   workflowEscalate.Stage,
+                WorkflowSummary: workflowEscalate.Summary,
+                NeedsEvidence:   workflowEscalate.NeedsEvidence);
+        }
+
+        if (status.Workflow is { Stage: WorkflowStage.Validate } workflowValidate &&
+            status.Evidence is not null &&
+            (status.Evidence.RunningJobs > 0 || status.Evidence.PendingJobs > 0))
+        {
+            return Decision(status.Name, DeliberationAction.Skip,
+                "Verification is already in progress — observe until the current job completes.",
+                urgencyScore: null,
+                suggestedTone: null,
+                status,
+                workflowValidate);
+        }
+
+        if (status.Workflow is { Stage: WorkflowStage.Review } workflowReview &&
+            status.Evidence is { HasFreshVerification: true })
+        {
+            return Decision(status.Name, DeliberationAction.Skip,
+                "Fresh verification evidence exists — project is ready for review rather than another nudge.",
+                urgencyScore: null,
+                suggestedTone: null,
+                status,
+                workflowReview);
+        }
+
         // PERCEIVE — is the project stalled?
         if (!status.IsStalled || status.SecondsSinceLastEvent is null)
         {
             return Decision(status.Name, DeliberationAction.Skip,
                 "Project is active — no stall detected.",
-                urgencyScore: null, suggestedTone: null);
+                urgencyScore: null, suggestedTone: null, status, status.Workflow);
         }
 
         // TRIAGE — compute urgency score
@@ -74,7 +113,7 @@ public class DeliberationService(
         {
             return Decision(status.Name, DeliberationAction.Skip,
                 $"Urgency {urgency:F2} below threshold {settings.UrgencyThreshold:F2}.",
-                urgency, suggestedTone: null);
+                urgency, suggestedTone: null, status, status.Workflow);
         }
 
         // DELIBERATE — check for blocking conditions
@@ -82,29 +121,42 @@ public class DeliberationService(
         {
             return Decision(status.Name, DeliberationAction.AlreadyQueued,
                 "A nudge is already waiting in the project inbox.",
-                urgency, suggestedTone: null);
+                urgency, suggestedTone: null, status, status.Workflow);
         }
 
         if (!budgetService.HasBudget)
         {
             return Decision(status.Name, DeliberationAction.BudgetExhausted,
                 "Session nudge budget is exhausted.",
-                urgency, suggestedTone: null);
+                urgency, suggestedTone: null, status, status.Workflow);
         }
 
         // SELECT TONE — pick the highest-scoring tone for this project
         var scores = ProfileStore.GetScores(status.Name);
         var (tone, strategyScore) = SelectTone(scores);
 
+        if (status.Workflow is { Stage: WorkflowStage.Refine })
+            tone = "redirect";
+
+        if (status.Workflow is { Stage: WorkflowStage.Implement } && status.Evidence?.NeedsVerification == true)
+            tone = "redirect";
+
+        var reason = status.Workflow is { Summary: not null } workflow
+            ? $"{workflow.Summary} Stall detected ({status.SecondsSinceLastEvent.Value:F0}s). Urgency: {urgency:F2}."
+            : $"Stall detected ({status.SecondsSinceLastEvent.Value:F0}s). Urgency: {urgency:F2}.";
+
         return new DeliberationDecision(
             Project:         status.Name,
             Action:          DeliberationAction.Nudge,
-            Reason:          $"Stall detected ({status.SecondsSinceLastEvent.Value:F0}s). Urgency: {urgency:F2}.",
+            Reason:          reason,
             UrgencyScore:    urgency,
             SuggestedTone:   tone,
             BudgetRemaining: budgetService.Remaining,
             StrategyScore:   strategyScore,
-            StallSeconds:    status.SecondsSinceLastEvent.Value);
+            StallSeconds:    status.SecondsSinceLastEvent.Value,
+            WorkflowStage:   status.Workflow?.Stage,
+            WorkflowSummary: status.Workflow?.Summary,
+            NeedsEvidence:   status.Workflow?.NeedsEvidence ?? false);
     }
 
     /// <summary>
@@ -126,10 +178,14 @@ public class DeliberationService(
 
     private DeliberationDecision Decision(
         string project, DeliberationAction action, string reason,
-        double? urgencyScore, string? suggestedTone, double stallSeconds = 0) =>
+        double? urgencyScore, string? suggestedTone, ProjectStatus status, WorkflowAssessment? workflow,
+        double stallSeconds = 0) =>
         new(project, action, reason, urgencyScore, suggestedTone,
             BudgetRemaining: budgetService.Remaining, StrategyScore: null,
-            StallSeconds: stallSeconds);
+            StallSeconds: stallSeconds,
+            WorkflowStage: workflow?.Stage,
+            WorkflowSummary: workflow?.Summary,
+            NeedsEvidence: workflow?.NeedsEvidence ?? false);
 
     /// <summary>
     /// Self-assessment: reviews recent episode outcomes across all projects.

@@ -30,6 +30,8 @@ public static class Paths
 
     public static string JobDir (string project) => Path.Combine(_home, "jobs", project);
     public static string JobFile(string project) => Path.Combine(_home, "jobs", project, "jobs.jsonl");
+    public static string JobArtifacts(string project) => Path.Combine(_home, "jobs", project, "artifacts");
+    public static string JobArtifact(string project, string jobId) => Path.Combine(JobArtifacts(project), $"{jobId}.log");
 
     /// <summary>Redirect all paths to a custom root — used by tests to isolate I/O.</summary>
     internal static void SetRoot(string root) => _home = root;

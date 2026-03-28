@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 using Watchdog.Server.Lib;
+using Watchdog.Server.Models;
 using Watchdog.Server.Services;
 
 namespace Watchdog.Server.Tools;
@@ -17,7 +18,8 @@ public class InterveneTools(
     ProjectService   projects,
     HookInstaller    hooks,
     NudgeService     nudges,
-    SubagentService  subagents)
+    SubagentService  subagents,
+    WorkerSmokeTestService smokeTests)
 {
     [McpServerTool(Name = "watchdog_send_nudge")]
     [Description("Send a nudge message to a monitored project. Injected into the project agent's context on its next tool call via the PreToolUse hook. Consumes one session budget credit.")]
@@ -86,6 +88,63 @@ public class InterveneTools(
         catch (Exception ex) { return Error(ex.Message); }
     }
 
+    [McpServerTool(Name = "watchdog_set_project_policy")]
+    [Description("Update a project's review-evidence and worker-backend policy. Use this to require tests/builds before review or switch the default subagent backend to Claude.")]
+    public string SetProjectPolicy(
+        [Description("Project name")] string project,
+        [Description("Require a fresh successful test run before review.")] bool requireFreshTests = true,
+        [Description("Require a fresh successful build before review.")] bool requireFreshBuild = false,
+        [Description("Require zero unacknowledged warning alerts before review.")] bool requireNoWarnings = false,
+        [Description("Freshness window override in minutes. Use 0 to keep the global default.")] int evidenceFreshnessMinutes = 0,
+        [Description("Default worker backend: Command | Claude")] string defaultWorkerBackend = "Command",
+        [Description("Claude model for worker jobs, e.g. sonnet or opus.")] string claudeModel = "sonnet",
+        [Description("Claude effort for worker jobs: low | medium | high | max.")] string claudeEffort = "medium",
+        [Description("Claude permission mode for worker jobs, e.g. plan or dontAsk.")] string claudePermissionMode = "plan",
+        [Description("Optional Claude agent name to use for worker jobs.")] string? claudeAgent = null,
+        [Description("Allowed Claude tools for worker jobs. Omit to use the default read-oriented set.")] string[]? claudeAllowedTools = null,
+        [Description("Additional directories to grant the Claude worker access to.")] string[]? claudeAddDirs = null,
+        [Description("Optional appended system prompt for Claude worker jobs.")] string? claudeAppendSystemPrompt = null,
+        [Description("Maximum USD budget for a single Claude worker job. Use 0 to omit.")] double maxBudgetUsd = 0)
+    {
+        try
+        {
+            if (!Enum.TryParse<WorkerBackendKind>(defaultWorkerBackend, ignoreCase: true, out var backendKind))
+                return Error($"Unknown worker backend '{defaultWorkerBackend}'. Use Command or Claude.");
+
+            var policy = new ProjectWorkflowPolicy
+            {
+                ReviewEvidence = new ReviewEvidencePolicy
+                {
+                    RequireFreshTests = requireFreshTests,
+                    RequireFreshBuild = requireFreshBuild,
+                    RequireNoWarnings = requireNoWarnings,
+                    EvidenceFreshnessMinutes = evidenceFreshnessMinutes > 0 ? evidenceFreshnessMinutes : null
+                },
+                WorkerBackend = new WorkerBackendPolicy
+                {
+                    DefaultBackend = backendKind,
+                    ClaudeModel = claudeModel,
+                    ClaudeEffort = claudeEffort,
+                    ClaudeAgent = string.IsNullOrWhiteSpace(claudeAgent) ? null : claudeAgent,
+                    PermissionMode = claudePermissionMode,
+                    AllowedTools = claudeAllowedTools is { Length: > 0 } ? claudeAllowedTools : ProjectWorkflowPolicy.Default.WorkerBackend.AllowedTools,
+                    AdditionalDirectories = claudeAddDirs ?? [],
+                    AppendSystemPrompt = string.IsNullOrWhiteSpace(claudeAppendSystemPrompt) ? null : claudeAppendSystemPrompt,
+                    MaxBudgetUsd = maxBudgetUsd > 0 ? (decimal?)maxBudgetUsd : null
+                }
+            };
+
+            var updated = projects.UpdatePolicy(project, policy);
+            return JsonSerializer.Serialize(new
+            {
+                updated = true,
+                project,
+                policy = updated.EffectivePolicy,
+            }, JsonOptions.Indented);
+        }
+        catch (Exception ex) { return Error(ex.Message); }
+    }
+
     [McpServerTool(Name = "watchdog_remove_project")]
     [Description("Unregister a project from Watchdog monitoring.")]
     public string RemoveProject(
@@ -127,6 +186,20 @@ public class InterveneTools(
             return Error($"Job \"{jobId}\" not found for project \"{project}\".");
 
         return JsonSerializer.Serialize(job, JsonOptions.Indented);
+    }
+
+    [McpServerTool(Name = "watchdog_smoke_test_worker")]
+    [Description("Launch a real bounded Claude worker smoke test for a project and optionally wait briefly for completion. This validates the live Claude worker backend instead of only previewing a plan.")]
+    public string SmokeTestWorker(
+        [Description("Project name")] string project,
+        [Description("Seconds to wait for completion before returning. Use 0 for fire-and-check-later mode.")] int waitForCompletionSeconds = 10)
+    {
+        try
+        {
+            var result = smokeTests.Start(project, waitForCompletionSeconds);
+            return JsonSerializer.Serialize(result, JsonOptions.Indented);
+        }
+        catch (Exception ex) { return Error(ex.Message); }
     }
 
     private static string Error(string message) =>

@@ -41,10 +41,13 @@ When you begin a session:
 | `watchdog_get_status` | Health snapshot of all or one project |
 | `watchdog_read_stream` | Read tool-use events since a cursor |
 | `watchdog_list_projects` | List registered projects |
+| `watchdog_get_project_policy` | Inspect a project's review-evidence and worker-backend policy |
 | `watchdog_get_alerts` | Safety alerts for a project (destructive commands, secrets, force pushes) |
 | `watchdog_self_report` | Session summary report: nudges, outcomes, tone effectiveness, patterns |
 | `watchdog_get_cross_alerts` | Cross-project cascading stall alerts |
 | `watchdog_get_patterns` | Crystallized strategy insights from episode history |
+| `watchdog_list_jobs` | Inspect recent subagent jobs for a project |
+| `watchdog_read_job_artifact` | Read a worker job's artifact output |
 
 ### Intervene
 | Tool | Purpose |
@@ -53,8 +56,10 @@ When you begin a session:
 | `watchdog_add_project` | Register a new project |
 | `watchdog_install_hooks` | Install hooks in a project's `.claude/` config |
 | `watchdog_remove_project` | Unregister a project |
-| `watchdog_spawn_subagent` | Spawn a bounded subagent task (stub — records job for tracking) |
+| `watchdog_set_project_policy` | Update project review-evidence and worker-backend policy |
+| `watchdog_spawn_subagent` | Spawn a bounded subagent task using the command or Claude worker backend |
 | `watchdog_get_job` | Get status/result of a subagent job |
+| `watchdog_smoke_test_worker` | Launch a live Claude worker smoke test for a project |
 
 ### Deliberate (Phase 2)
 | Tool | Purpose |
@@ -78,6 +83,11 @@ Users can issue these slash commands in the supervisor session:
 | `/self-report` | Generate session summary with `watchdog_self_report` |
 | `/patterns [project]` | Show crystallized strategy patterns with `watchdog_get_patterns` |
 | `/alerts <project>` | Show safety alerts with `watchdog_get_alerts` |
+| `/watchdog.jobs <project>` | Show recent worker jobs for a project |
+| `/watchdog.artifact <project> <job-id>` | Read a worker job artifact |
+| `/watchdog.policy <project>` | Show the current review and worker policy |
+| `/watchdog.set-policy <project> ...` | Update project review or worker policy |
+| `/watchdog.smoke-worker <project>` | Run a live Claude worker smoke test |
 | `/help` | Print this command list |
 
 ---
@@ -140,6 +150,7 @@ review patterns with `/patterns`, and consider changing your approach.
 - You are not a replacement for the user. You support them.
 - You do not rewrite CLAUDE.md files autonomously.
 - You do not spawn subagents in Phase 1 (that is Phase 4).
+- When using Claude-backed worker jobs, keep them bounded: review, analyze, summarize, verify. Do not use them as unrestricted autonomous replacements for the user.
 - You do not have memory beyond this session unless explicitly stored in files.
 
 ---

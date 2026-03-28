@@ -33,5 +33,13 @@ public class ProjectService
 
     public Project? Get(string name) => ProjectRegistry.Get(name);
 
+    public ProjectWorkflowPolicy GetPolicy(string name) =>
+        ProjectRegistry.Get(name)?.EffectivePolicy
+        ?? throw new InvalidOperationException($"Project \"{name}\" is not registered.");
+
+    public Project UpdatePolicy(string name, ProjectWorkflowPolicy policy) =>
+        ProjectRegistry.UpdatePolicy(name, policy)
+        ?? throw new InvalidOperationException($"Project \"{name}\" is not registered.");
+
     public ProjectsConfig List() => ProjectRegistry.Load();
 }

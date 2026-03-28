@@ -17,6 +17,9 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddSingleton<ProjectService>();
 builder.Services.AddSingleton<HookInstaller>();
 builder.Services.AddSingleton<StatusService>();
+builder.Services.AddSingleton<EvidenceService>();
+builder.Services.AddSingleton<WorkflowService>();
+builder.Services.AddSingleton<WorkerSmokeTestService>();
 
 // Phase 2 — deliberative loop
 builder.Services.AddSingleton<BudgetService>();

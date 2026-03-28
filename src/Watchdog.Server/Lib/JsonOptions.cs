@@ -5,6 +5,7 @@
 // MCP server that monitors and supervises Claude Code sessions.
 // ─────────────────────────────────────────────────────────────────
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Watchdog.Server.Lib;
 
@@ -16,8 +17,18 @@ namespace Watchdog.Server.Lib;
 public static class JsonOptions
 {
     public static readonly JsonSerializerOptions Default =
-        new(JsonSerializerDefaults.Web);
+        Create(writeIndented: false);
 
     public static readonly JsonSerializerOptions Indented =
-        new(JsonSerializerDefaults.Web) { WriteIndented = true };
+        Create(writeIndented: true);
+
+    private static JsonSerializerOptions Create(bool writeIndented)
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = writeIndented
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
 }

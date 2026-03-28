@@ -28,5 +28,8 @@ public record DeliberationDecision(
     int                BudgetRemaining,
     double?            StrategyScore,   // effectiveness of SuggestedTone for this project
     double             StallSeconds = 0,
-    string?            MetaAssessment = null
+    string?            MetaAssessment = null,
+    WorkflowStage?     WorkflowStage = null,
+    string?            WorkflowSummary = null,
+    bool               NeedsEvidence = false
 );

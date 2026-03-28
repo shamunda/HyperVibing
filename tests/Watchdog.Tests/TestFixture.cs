@@ -5,6 +5,7 @@
 // MCP server that monitors and supervises Claude Code sessions.
 // ─────────────────────────────────────────────────────────────────
 using Watchdog.Server.Lib;
+using Watchdog.Server.Models;
 
 namespace Watchdog.Tests;
 
@@ -33,6 +34,11 @@ public abstract class TestFixture : IDisposable
         Directory.CreateDirectory(projectPath);
         ProjectRegistry.Add(name, projectPath);
         Mailbox.Ensure(name);
+    }
+
+    protected void SetProjectPolicy(string name, ProjectWorkflowPolicy policy)
+    {
+        ProjectRegistry.UpdatePolicy(name, policy);
     }
 
     public void Dispose()

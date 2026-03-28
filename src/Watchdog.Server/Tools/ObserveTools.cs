@@ -17,7 +17,9 @@ public class ObserveTools(
     StatusService        statusService,
     ReportService        reportService,
     CrossProjectService  crossProjectService,
-    PatternService       patternService)
+    PatternService       patternService,
+    ProjectService       projects,
+    SubagentService      subagents)
 {
     [McpServerTool(Name = "watchdog_read_stream")]
     [Description("Read tool-use events from a monitored project's event stream since a given cursor position.")]
@@ -67,6 +69,67 @@ public class ObserveTools(
     {
         var config = statusService.GetAll();
         return JsonSerializer.Serialize(config, JsonOptions.Indented);
+    }
+
+    [McpServerTool(Name = "watchdog_get_project_policy")]
+    [Description("Get the workflow and worker-backend policy for a monitored project.")]
+    public string GetProjectPolicy(
+        [Description("Project name")] string project)
+    {
+        try
+        {
+            var policy = projects.GetPolicy(project);
+            return JsonSerializer.Serialize(new { project, policy }, JsonOptions.Indented);
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.Serialize(new { error = true, message = ex.Message }, JsonOptions.Indented);
+        }
+    }
+
+    [McpServerTool(Name = "watchdog_list_jobs")]
+    [Description("List recent subagent jobs for a project, including command/backend, status, and timestamps.")]
+    public string ListJobs(
+        [Description("Project name")] string project,
+        [Description("Maximum jobs to return (1-200)")] int limit = 20)
+    {
+        try
+        {
+            var jobs = subagents.ListJobs(project, limit);
+            return JsonSerializer.Serialize(new
+            {
+                project,
+                returned = jobs.Count,
+                jobs,
+            }, JsonOptions.Indented);
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.Serialize(new { error = true, message = ex.Message }, JsonOptions.Indented);
+        }
+    }
+
+    [McpServerTool(Name = "watchdog_read_job_artifact")]
+    [Description("Read a subagent job artifact log cleanly without opening the raw file path directly.")]
+    public string ReadJobArtifact(
+        [Description("Project name")] string project,
+        [Description("Job ID")] string jobId,
+        [Description("Maximum lines to return (1-1000)")] int maxLines = 200)
+    {
+        try
+        {
+            var content = subagents.ReadArtifact(project, jobId, maxLines);
+            return JsonSerializer.Serialize(new
+            {
+                project,
+                job_id = jobId,
+                content,
+            }, JsonOptions.Indented);
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.Serialize(new { error = true, message = ex.Message }, JsonOptions.Indented);
+        }
     }
 
     [McpServerTool(Name = "watchdog_get_alerts")]

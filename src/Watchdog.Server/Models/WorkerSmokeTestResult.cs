@@ -6,15 +6,13 @@
 // ─────────────────────────────────────────────────────────────────
 namespace Watchdog.Server.Models;
 
-public record Project(
-    string         Name,
-    string         Path,
-    DateTimeOffset AddedAt,
-    bool           HooksInstalled,
-    ProjectWorkflowPolicy? Policy = null
-)
-{
-    public ProjectWorkflowPolicy EffectivePolicy => Policy ?? ProjectWorkflowPolicy.Default;
-}
-
-public record ProjectsConfig(List<Project> Projects);
+public record WorkerSmokeTestResult(
+    string          Project,
+    string          JobId,
+    JobStatus       Status,
+    bool            CompletedWithinWaitWindow,
+    string          TaskSpec,
+    string?         Result,
+    string?         ArtifactPath,
+    string?         ArtifactPreview
+);

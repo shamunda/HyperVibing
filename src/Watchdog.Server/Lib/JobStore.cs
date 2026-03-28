@@ -19,6 +19,32 @@ public static class JobStore
             JsonSerializer.Serialize(job, JsonOptions.Default) + "\n");
     }
 
+    public static bool Replace(string project, SubagentJob updatedJob)
+    {
+        var file = Paths.JobFile(project);
+        if (!File.Exists(file)) return false;
+
+        var lines   = File.ReadAllLines(file);
+        var patched = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            try
+            {
+                var job = JsonSerializer.Deserialize<SubagentJob>(lines[i], JsonOptions.Default);
+                if (job?.JobId != updatedJob.JobId) continue;
+                lines[i] = JsonSerializer.Serialize(updatedJob, JsonOptions.Default);
+                patched = true;
+                break;
+            }
+            catch { /* skip */ }
+        }
+
+        if (!patched) return false;
+        File.WriteAllLines(file, lines);
+        return true;
+    }
+
     public static SubagentJob? Get(string project, string jobId) =>
         ListRecent(project).FirstOrDefault(j => j.JobId == jobId);
 
@@ -58,6 +84,22 @@ public static class JobStore
         return File.ReadAllLines(file)
             .Reverse()
             .Take(max)
+            .Select(line =>
+            {
+                try { return JsonSerializer.Deserialize<SubagentJob>(line, JsonOptions.Default); }
+                catch { return null; }
+            })
+            .Where(j => j is not null)
+            .Cast<SubagentJob>()
+            .ToList();
+    }
+
+    public static List<SubagentJob> ListAll(string project)
+    {
+        var file = Paths.JobFile(project);
+        if (!File.Exists(file)) return [];
+
+        return File.ReadAllLines(file)
             .Select(line =>
             {
                 try { return JsonSerializer.Deserialize<SubagentJob>(line, JsonOptions.Default); }

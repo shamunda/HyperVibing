@@ -2,7 +2,31 @@
   "projects": [
     {
       "name": "bon-jailbreaking",
-      "path": "D:\\bon-jailbreaking"
+      "path": "D:\\bon-jailbreaking",
+      "policy": {
+        "reviewEvidence": {
+          "requireFreshTests": true,
+          "requireFreshBuild": false,
+          "requireNoCriticalAlerts": true,
+          "requireNoWarnings": false
+        },
+        "workerBackend": {
+          "defaultBackend": "Command",
+          "claudeExecutable": "claude",
+          "claudeModel": "sonnet",
+          "claudeEffort": "medium",
+          "permissionMode": "plan",
+          "useBareMode": true,
+          "disableSessionPersistence": true,
+          "allowedTools": [
+            "Read",
+            "Grep",
+            "LS",
+            "Glob"
+          ],
+          "additionalDirectories": []
+        }
+      }
     }
   ]
 }

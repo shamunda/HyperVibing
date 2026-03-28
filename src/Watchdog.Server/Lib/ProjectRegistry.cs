@@ -34,7 +34,8 @@ public static class ProjectRegistry
         var existing = config.Projects.FirstOrDefault(p => p.Name == name);
         if (existing is not null) return (existing, true);
 
-        var project = new Project(name, path, DateTimeOffset.UtcNow, HooksInstalled: false);
+        var project = new Project(name, path, DateTimeOffset.UtcNow, HooksInstalled: false,
+            Policy: ProjectWorkflowPolicy.Default);
         Save(config with { Projects = [..config.Projects, project] });
         return (project, false);
     }
@@ -49,6 +50,25 @@ public static class ProjectRegistry
             .Select(p => p.Name == name ? p with { HooksInstalled = true } : p)
             .ToList();
         Save(config with { Projects = updated });
+    }
+
+    public static Project? UpdatePolicy(string name, ProjectWorkflowPolicy policy)
+    {
+        var config = Load();
+        Project? updatedProject = null;
+
+        var updated = config.Projects
+            .Select(p =>
+            {
+                if (p.Name != name) return p;
+                updatedProject = p with { Policy = policy };
+                return updatedProject;
+            })
+            .ToList();
+
+        if (updatedProject is null) return null;
+        Save(config with { Projects = updated });
+        return updatedProject;
     }
 
     public static bool Remove(string name)

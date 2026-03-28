@@ -16,5 +16,7 @@ public record ProjectStatus(
     int             InboxCount,
     int             OutboxCount,
     int             DeadLetterCount,
-    bool            IsStalled
+    bool            IsStalled,
+    WorkflowAssessment? Workflow = null,
+    EvidenceSummary? Evidence = null
 );

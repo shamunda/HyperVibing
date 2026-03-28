@@ -6,15 +6,20 @@
 // ─────────────────────────────────────────────────────────────────
 namespace Watchdog.Server.Models;
 
-public record Project(
-    string         Name,
-    string         Path,
-    DateTimeOffset AddedAt,
-    bool           HooksInstalled,
-    ProjectWorkflowPolicy? Policy = null
-)
-{
-    public ProjectWorkflowPolicy EffectivePolicy => Policy ?? ProjectWorkflowPolicy.Default;
-}
-
-public record ProjectsConfig(List<Project> Projects);
+public record EvidenceSummary(
+    int             RunningJobs,
+    int             PendingJobs,
+    int             FailedJobs,
+    int             CompletedJobs,
+    int             CriticalAlerts,
+    int             WarningAlerts,
+    DateTimeOffset? LastBuildAt,
+    bool?           LastBuildSucceeded,
+    DateTimeOffset? LastTestAt,
+    bool?           LastTestSucceeded,
+    DateTimeOffset? LastVerificationAt,
+    bool            HasFreshVerification,
+    bool            NeedsVerification,
+    string?         LatestFailure,
+    string[]        Findings
+);

@@ -13,7 +13,7 @@ namespace Watchdog.Server.Services;
 /// Business logic for computing project health status.
 /// Aggregates data from stream, mailbox, and registry into a unified snapshot.
 /// </summary>
-public class StatusService
+public class StatusService(EvidenceService evidenceService, WorkflowService workflowService)
 {
     public List<ProjectStatus> GetAll() =>
         ProjectRegistry.Load().Projects.Select(Compute).ToList();
@@ -31,7 +31,7 @@ public class StatusService
 
     // ── Private ───────────────────────────────────────────────────────────
 
-    private static ProjectStatus Compute(Project p)
+    private ProjectStatus Compute(Project p)
     {
         var settings  = SettingsLoader.Get();
         var lastEvent = StreamStore.LastEvent(p.Name);
@@ -42,8 +42,9 @@ public class StatusService
         var lastAt  = lastEvent?.Ts;
         var seconds = lastAt.HasValue ? (now - lastAt.Value).TotalSeconds : (double?)null;
         var stalled = seconds.HasValue && seconds.Value > settings.StallThresholdSeconds;
+        var evidence = evidenceService.Summarize(p.Name);
 
-        return new ProjectStatus(
+        var baseStatus = new ProjectStatus(
             Name:                  p.Name,
             Path:                  p.Path,
             HooksInstalled:        p.HooksInstalled,
@@ -53,6 +54,12 @@ public class StatusService
             InboxCount:            counts.Inbox,
             OutboxCount:           counts.Outbox,
             DeadLetterCount:       counts.DeadLetter,
-            IsStalled:             stalled);
+            IsStalled:             stalled,
+            Evidence:              evidence);
+
+        return baseStatus with
+        {
+            Workflow = workflowService.Assess(baseStatus, evidence)
+        };
     }
 }

@@ -2,6 +2,12 @@
   "stall_threshold_seconds": 60,
   "urgency_threshold": 0.40,
   "session_budget": 5,
+  "subagent_timeout_seconds": 180,
+  "evidence_freshness_minutes": 30,
+  "allowed_subagent_commands": [
+    "dotnet",
+    "git"
+  ],
   "reflection_window_minutes": 5,
   "relay_baton_max_age_hours": 8,
   "safety_rules": [

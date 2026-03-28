@@ -6,15 +6,20 @@
 // ─────────────────────────────────────────────────────────────────
 namespace Watchdog.Server.Models;
 
-public record Project(
-    string         Name,
-    string         Path,
-    DateTimeOffset AddedAt,
-    bool           HooksInstalled,
-    ProjectWorkflowPolicy? Policy = null
-)
+public enum WorkflowStage
 {
-    public ProjectWorkflowPolicy EffectivePolicy => Policy ?? ProjectWorkflowPolicy.Default;
+    Observe,
+    Implement,
+    Validate,
+    Refine,
+    Review,
+    Escalate
 }
 
-public record ProjectsConfig(List<Project> Projects);
+public record WorkflowAssessment(
+    WorkflowStage Stage,
+    string        Summary,
+    bool          NeedsAttention,
+    bool          NeedsEvidence,
+    string?       BlockingReason
+);
