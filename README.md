@@ -22,6 +22,16 @@ Important naming note:
 3. Git
 4. PowerShell
 
+## Detailed Docs
+
+If you want the full MCP and runtime reference, start here:
+
+1. [docs/README.md](docs/README.md)
+2. [docs/installation-and-platforms.md](docs/installation-and-platforms.md)
+3. [docs/mcp-tools.md](docs/mcp-tools.md)
+4. [docs/claude-commands.md](docs/claude-commands.md)
+5. [docs/runtime-architecture.md](docs/runtime-architecture.md)
+
 ## What Installation Does
 
 Running `install.ps1` does all of the following:
