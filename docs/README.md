@@ -2,7 +2,7 @@
 
 This directory documents the HyperVibing MCP server as it exists in this repository.
 
-Use these docs based on what you are doing:
+Use these documents based on the task:
 
 1. If you are installing HyperVibing for the first time, read [installation-and-platforms.md](installation-and-platforms.md).
 2. If you are using HyperVibing from Claude Code slash commands, read [claude-commands.md](claude-commands.md).
@@ -28,7 +28,7 @@ HyperVibing has two operator-facing modes.
 
 ### 1. Claude Code command mode
 
-Use this when you are working inside Claude Code and want friendly commands.
+Use this when you are working inside Claude Code and want command wrappers over the MCP tools.
 
 Examples:
 

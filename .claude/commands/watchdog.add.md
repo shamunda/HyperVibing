@@ -10,7 +10,7 @@ Call `watchdog_add_project` with the provided name and path.
 
 If registration succeeds, immediately call `watchdog_install_hooks` for the same project.
 
-Output a compact operator summary with:
+Output a compact summary with:
 
 - project name
 - resolved path

@@ -54,7 +54,7 @@ HyperVibing exposes three tool groups:
 
 ### `watchdog_add_project` is not the same as `/watchdog.add`
 
-This matters.
+These are different entry points.
 
 1. Raw MCP `watchdog_add_project` only registers the project.
 2. Raw MCP `watchdog_install_hooks` must be called after that.

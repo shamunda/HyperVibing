@@ -2,14 +2,14 @@
 
 HyperVibing is an MCP server for Claude Code that monitors active project sessions and gives you a separate supervisor session for visibility and intervention.
 
-Use it when you want to:
+Use it to:
 
 1. Detect stalled Claude Code sessions.
 2. See what a project session actually did.
 3. Send nudges back into a project session.
 4. Run bounded worker jobs without cluttering the main project session.
 
-Important naming note:
+## Naming
 
 1. The repository is named `HyperVibing`.
 2. The current MCP tools and slash commands use the `watchdog_*` prefix.
@@ -113,7 +113,7 @@ You should now see your project.
 
 ## First Demo From Scratch
 
-This section is for a brand-new user who wants a safe test drive.
+This section creates a minimal test project and verifies the monitoring flow end to end.
 
 ### Step 1. Create a demo folder
 
@@ -200,7 +200,7 @@ You now have a working monitored project and a working supervisor session.
 
 ## What You Should See In Practice
 
-Use the demo above and verify these benefits.
+Use the demo above to verify the expected runtime behavior.
 
 ### 1. Stall detection
 
@@ -211,7 +211,7 @@ Use the demo above and verify these benefits.
 /watchdog.status
 ```
 
-1. The project should be reported as stalled.
+Expected result: the project is reported as stalled.
 
 ### 2. Event visibility
 
@@ -228,7 +228,7 @@ Add a second method to Greeter and run dotnet build again.
 /watchdog.stream demo-app
 ```
 
-1. You should see the recent tool activity.
+Expected result: the recent tool activity appears in the stream output.
 
 ### 3. Supervisor intervention
 
@@ -257,7 +257,7 @@ If a job artifact exists, read it with:
 
 ## Normal Day-To-Day Flow
 
-Once installed, this is the standard workflow.
+Once installed, this is the standard operating sequence.
 
 ### Install once
 

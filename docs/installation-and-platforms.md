@@ -12,7 +12,7 @@ HyperVibing is designed for:
 
 ## Required Software
 
-Install all four of these before you try to use HyperVibing.
+Install all four before using HyperVibing.
 
 | Requirement | Windows | macOS | Linux | Why it is needed |
 | --- | --- | --- | --- | --- |
@@ -153,7 +153,7 @@ cd C:\path\to\your\project
 claude --dangerously-skip-permissions
 ```
 
-That new session is the monitored session.
+That new session is the monitored project session.
 
 ### Step 5. Open a supervisor session
 
@@ -176,7 +176,7 @@ Inside the supervisor session, use:
 
 1. The installer script can run in Windows PowerShell.
 2. The monitored project hook writer uses `pwsh` in `.claude/settings.json`.
-3. Install PowerShell 7 even on Windows to avoid hook failures.
+3. Install PowerShell 7 on Windows to avoid hook failures.
 
 ### macOS notes
 

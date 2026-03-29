@@ -4,7 +4,7 @@ This document describes the Claude Code slash commands shipped in `.claude/comma
 
 These commands are convenience wrappers around the raw MCP tools.
 
-Use them when you are already inside Claude Code.
+Use them when you are already working inside Claude Code.
 
 ## What Exists
 
@@ -54,11 +54,11 @@ It summarizes:
 
 ### `/watchdog.stream <project>`
 
-Use this when status is not enough and you need to see the recent tool-use record.
+Use this when the status summary is not enough and you need the recent tool-use record.
 
 ### `/watchdog.nudge <project> <message>`
 
-Use this when you need to intervene.
+Use this when operator intervention is required.
 
 The nudge is delivered by the PreToolUse hook on the monitored session's next tool call.
 
@@ -146,7 +146,7 @@ It launches a bounded worker job and either:
 
 ## Recommended Operator Flow
 
-For a normal supervisor session, use this order:
+For a normal supervisor session, use this sequence:
 
 1. `/watchdog.status`
 2. `/watchdog.stream <project>` if the project needs inspection

@@ -12,7 +12,7 @@ HyperVibing has three runtime roles:
 
 The MCP server is the control plane.
 
-The monitored project session produces events.
+The monitored project session produces tool-use events.
 
 The supervisor session reads status and sends interventions.
 
@@ -48,7 +48,7 @@ It supports these process arguments:
 1. `hook-pre-tool-use`
 2. `hook-post-tool-use`
 
-Those modes are used by the PowerShell scripts in `~/.watchdog/hooks/`.
+Those modes are invoked by the PowerShell scripts in `~/.watchdog/hooks/`.
 
 ## What The Project Hooks Do
 
@@ -175,7 +175,7 @@ Current default allow-list:
 
 ### Claude backend
 
-Use this when you want a real bounded Claude worker job.
+Use this when you need a real bounded Claude worker job.
 
 Policy controls:
 
@@ -188,7 +188,7 @@ Policy controls:
 7. Max budget
 8. Optional appended system prompt
 
-The worker is launched through the Claude CLI with `--print` and receives its prompt through stdin.
+The worker is launched through the Claude CLI with `--print` and receives its prompt through standard input.
 
 ## Review Evidence And Policy
 
