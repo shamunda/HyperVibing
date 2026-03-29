@@ -156,7 +156,7 @@ public class SubagentService
     private static void PersistResult(SubagentJob startedJob, JobStatus status, int? exitCode, StringBuilder output, string summary)
     {
         var artifactPath = startedJob.ArtifactPath ?? Paths.JobArtifact(startedJob.Project, startedJob.JobId);
-        File.WriteAllText(artifactPath, output.ToString());
+        AtomicFile.WriteAllText(artifactPath, output.ToString());
 
         var outputText = output.ToString();
         var result = string.IsNullOrWhiteSpace(outputText)

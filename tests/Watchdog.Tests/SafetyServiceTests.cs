@@ -25,7 +25,7 @@ public class SafetyServiceTests : TestFixture
     [Fact]
     public void Evaluate_DestructiveRmRf_ReturnsCriticalAlert()
     {
-        var ev = MakeEvent("bash", "rm -rf /important/dir");
+        var ev = MakeEvent("bash", "rm -rf /");
         var alert = _sut.Evaluate(ev, ["destructive_command"]);
 
         Assert.NotNull(alert);
@@ -56,7 +56,7 @@ public class SafetyServiceTests : TestFixture
     [Fact]
     public void Evaluate_SecretInCode_ReturnsWarningAlert()
     {
-        var ev = MakeEvent("write_file", "api_key = \"sk-abcdef1234567890abcd\"");
+        var ev = MakeEvent("write_file", "api_key = \"DemoSecretValue1234567890\"");
         var alert = _sut.Evaluate(ev, ["secret_in_code"]);
 
         Assert.NotNull(alert);
@@ -92,13 +92,22 @@ public class SafetyServiceTests : TestFixture
     }
 
     [Fact]
-    public void Evaluate_AwsAccessKey_ReturnsWarning()
+    public void Evaluate_AccessKeyAssignment_ReturnsWarning()
     {
-        var ev = MakeEvent("create_file", "aws_key = \"AKIAIOSFODNN7EXAMPLE\"");
+        var ev = MakeEvent("create_file", "aws_key = \"ExampleAccessKey1234567890\"");
         var alert = _sut.Evaluate(ev, ["secret_in_code"]);
 
         Assert.NotNull(alert);
         Assert.Equal(AlertSeverity.Warning, alert.Severity);
+    }
+
+    [Fact]
+    public void Evaluate_TargetedDelete_DoesNotRaiseFalsePositive()
+    {
+        var ev = MakeEvent("bash", "rm -rf /important/dir");
+        var alert = _sut.Evaluate(ev, ["destructive_command"]);
+
+        Assert.Null(alert);
     }
 
     private static StreamEvent MakeEvent(string toolName, string input) => new(

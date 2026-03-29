@@ -143,7 +143,7 @@ function Copy-Config {
     }
 
     # Create runtime directories
-    foreach ($dir in @('streams', 'mailboxes', 'episodes')) {
+    foreach ($dir in @('backups')) {
         New-Item -ItemType Directory -Path (Join-Path $WatchdogHome $dir) -Force | Out-Null
     }
 }

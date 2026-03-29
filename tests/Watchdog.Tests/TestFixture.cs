@@ -22,6 +22,7 @@ public abstract class TestFixture : IDisposable
         TestRoot = Path.Combine(Path.GetTempPath(), "watchdog-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(TestRoot);
         Paths.SetRoot(TestRoot);
+        WatchdogDataStore.Reset();
         SettingsLoader.Invalidate();
     }
 
@@ -44,6 +45,7 @@ public abstract class TestFixture : IDisposable
     public void Dispose()
     {
         Paths.ResetRoot();
+        WatchdogDataStore.Reset();
         SettingsLoader.Invalidate();
         try { Directory.Delete(TestRoot, recursive: true); } catch { /* best effort */ }
         GC.SuppressFinalize(this);

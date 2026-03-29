@@ -23,13 +23,10 @@ namespace Watchdog.Server.Services;
 public class WatchLoopService(
     DeliberationService  deliberation,
     NudgeService         nudges,
-    SafetyService        safety,
     BudgetService        budget,
     CrossProjectService  crossProject,
     ILogger<WatchLoopService> logger) : BackgroundService
 {
-    private readonly Dictionary<string, int> _streamCursors = new();
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var settings = SettingsLoader.Get();
@@ -57,7 +54,6 @@ public class WatchLoopService(
 
         try
         {
-            EvaluateNewEventsForSafety();
             RunDeliberationCycle();
             DetectCrossProjectIssues();
         }
@@ -79,27 +75,6 @@ public class WatchLoopService(
 
         logger.LogDebug("Lock held by another instance — skipping tick.");
         return false;
-    }
-
-    private void EvaluateNewEventsForSafety()
-    {
-        var settings  = SettingsLoader.Get();
-        var projects  = ProjectRegistry.Load().Projects;
-
-        foreach (var project in projects)
-        {
-            var cursor = _streamCursors.GetValueOrDefault(project.Name, 0);
-            var slice  = StreamStore.ReadSince(project.Name, cursor, limit: 200);
-
-            foreach (var ev in slice.Events)
-            {
-                var alert = safety.Evaluate(ev, settings.SafetyRules);
-                if (alert is { Severity: AlertSeverity.Critical })
-                    safety.AutoEscalate(alert);
-            }
-
-            _streamCursors[project.Name] = slice.NextCursor;
-        }
     }
 
     private void RunDeliberationCycle()

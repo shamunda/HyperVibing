@@ -13,5 +13,6 @@ public record StreamEvent(
     string              ToolName,
     object?             ToolInput,
     object?             ToolResponse,
-    string              Outcome       // "success" | "error"
+    string              Outcome,
+    string?             WorkingDirectory = null
 );

@@ -9,8 +9,14 @@ namespace Watchdog.Server.Lib;
 public static class Paths
 {
     private static string _home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".watchdog");
+    private static string? _databaseOverride;
 
     public static string Home               => _home;
+    public static string Database           => _databaseOverride ?? Path.Combine(_home, "watchdog.db");
+    public static string Backups            => Path.Combine(_home, "backups");
+    public static string DatabaseBackup     => Path.Combine(_home, "backups", "watchdog-latest.db");
+    public static string Server             => Path.Combine(_home, "server");
+    public static string ServerDll          => Path.Combine(_home, "server", "Watchdog.Server.dll");
     public static string Config             => Path.Combine(_home, "config");
     public static string Settings           => Path.Combine(_home, "config", "settings.json");
     public static string Projects           => Path.Combine(_home, "config", "projects.json");
@@ -33,12 +39,24 @@ public static class Paths
     public static string JobArtifacts(string project) => Path.Combine(_home, "jobs", project, "artifacts");
     public static string JobArtifact(string project, string jobId) => Path.Combine(JobArtifacts(project), $"{jobId}.log");
 
+    internal static string NewRecoveredDatabasePath() =>
+        Path.Combine(_home, $"watchdog-recovered-{DateTime.UtcNow:yyyyMMddHHmmss}.db");
+
     /// <summary>Redirect all paths to a custom root — used by tests to isolate I/O.</summary>
-    internal static void SetRoot(string root) => _home = root;
+    internal static void SetRoot(string root)
+    {
+        _home = root;
+        _databaseOverride = null;
+    }
+
+    internal static void SetDatabaseOverride(string? path) => _databaseOverride = path;
 
     /// <summary>Reset to the default home directory.</summary>
-    internal static void ResetRoot() =>
+    internal static void ResetRoot()
+    {
         _home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".watchdog");
+        _databaseOverride = null;
+    }
 
     public static class Mailbox
     {

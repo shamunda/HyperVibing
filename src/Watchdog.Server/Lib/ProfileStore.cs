@@ -4,7 +4,6 @@
 // Date:   March 2026
 // MCP server that monitors and supervises Claude Code sessions.
 // ─────────────────────────────────────────────────────────────────
-using System.Text.Json;
 using Watchdog.Server.Models;
 
 namespace Watchdog.Server.Lib;
@@ -13,22 +12,9 @@ public static class ProfileStore
 {
     private const double Alpha = 0.2; // EMA learning rate
 
-    public static StrategyProfile Load()
-    {
-        if (!File.Exists(Paths.Profile)) return StrategyProfile.Empty();
-        try
-        {
-            return JsonSerializer.Deserialize<StrategyProfile>(
-                File.ReadAllText(Paths.Profile), JsonOptions.Default) ?? StrategyProfile.Empty();
-        }
-        catch { return StrategyProfile.Empty(); }
-    }
+    public static StrategyProfile Load() => WatchdogDataStore.Current.LoadProfile();
 
-    public static void Save(StrategyProfile profile)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(Paths.Profile)!);
-        File.WriteAllText(Paths.Profile, JsonSerializer.Serialize(profile, JsonOptions.Indented));
-    }
+    public static void Save(StrategyProfile profile) => WatchdogDataStore.Current.SaveProfile(profile);
 
     public static ToneScores GetScores(string project)
     {

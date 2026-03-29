@@ -7,10 +7,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
+using Watchdog.Server.Lib;
 using Watchdog.Server.Services;
 using Watchdog.Server.Tools;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddSingleton<IWatchdogDataStore>(_ => WatchdogDataStore.Current);
+builder.Services.AddSingleton<HookCommandService>();
 
 // ── Services — business logic layer ───────────────────────────────────────
 // Phase 1
@@ -49,4 +53,23 @@ builder.Services
     .WithTools<InterveneTools>()
     .WithTools<LoopTools>();
 
-await builder.Build().RunAsync();
+using var host = builder.Build();
+
+if (args.Length > 0)
+{
+    var hooks = host.Services.GetRequiredService<HookCommandService>();
+    var raw = Console.In.ReadToEnd();
+    switch (args[0].ToLowerInvariant())
+    {
+        case "hook-pre-tool-use":
+            var output = hooks.RunPreToolUse(raw);
+            if (!string.IsNullOrWhiteSpace(output))
+                Console.WriteLine(output);
+            return;
+        case "hook-post-tool-use":
+            hooks.RunPostToolUse(raw);
+            return;
+    }
+}
+
+await host.RunAsync();
