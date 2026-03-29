@@ -76,13 +76,14 @@ public class InterveneTools(
     {
         try
         {
-            var settingsFile = hooks.Install(project);
+            var result = hooks.Install(project);
             return JsonSerializer.Serialize(new
             {
-                installed     = true,
+                installed          = true,
                 project,
-                settings_file = settingsFile,
-                note          = "Hooks are active on the next Claude Code session start in this project.",
+                settings_file      = result.SettingsPath,
+                git_hooks_installed = result.GitHooksInstalled,
+                note               = "All hooks installed. Close this Claude session and reopen it in the project directory to activate monitoring.",
             }, JsonOptions.Indented);
         }
         catch (Exception ex) { return Error(ex.Message); }
@@ -94,6 +95,7 @@ public class InterveneTools(
         [Description("Project name")] string project,
         [Description("Require a fresh successful test run before review.")] bool requireFreshTests = true,
         [Description("Require a fresh successful build before review.")] bool requireFreshBuild = false,
+        [Description("Require zero unacknowledged critical alerts before review.")] bool requireNoCriticalAlerts = true,
         [Description("Require zero unacknowledged warning alerts before review.")] bool requireNoWarnings = false,
         [Description("Freshness window override in minutes. Use 0 to keep the global default.")] int evidenceFreshnessMinutes = 0,
         [Description("Default worker backend: Command | Claude")] string defaultWorkerBackend = "Command",
@@ -117,6 +119,7 @@ public class InterveneTools(
                 {
                     RequireFreshTests = requireFreshTests,
                     RequireFreshBuild = requireFreshBuild,
+                    RequireNoCriticalAlerts = requireNoCriticalAlerts,
                     RequireNoWarnings = requireNoWarnings,
                     EvidenceFreshnessMinutes = evidenceFreshnessMinutes > 0 ? evidenceFreshnessMinutes : null
                 },

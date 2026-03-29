@@ -104,6 +104,7 @@ public class SubagentService
                     WorkingDirectory       = workingDirectory,
                     RedirectStandardOutput = true,
                     RedirectStandardError  = true,
+                    RedirectStandardInput  = plan.StdinPayload is not null,
                     UseShellExecute        = false,
                     CreateNoWindow         = true,
                 }
@@ -117,6 +118,13 @@ public class SubagentService
             process.ErrorDataReceived += (_, args) => AppendLine(output, args.Data);
 
             process.Start();
+
+            if (plan.StdinPayload is not null)
+            {
+                process.StandardInput.WriteLine(plan.StdinPayload);
+                process.StandardInput.Close();
+            }
+
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -267,8 +275,7 @@ public class SubagentService
         var command = string.IsNullOrWhiteSpace(spec?.Command) ? backend.ClaudeExecutable : spec!.Command!;
         var arguments = new List<string>
         {
-            "--print",
-            "--output-format", "text"
+            "--print"
         };
 
         if (backend.UseBareMode)
@@ -334,10 +341,10 @@ public class SubagentService
             arguments.AddRange(addDirs);
         }
 
-        arguments.Add(prompt);
-
+        // Deliver prompt via stdin — positional arg delivery fails when spawned without a terminal.
         return new ExecutionPlan(
             TaskKind:            SubagentTaskKind.ClaudeWorker,
+            StdinPayload:        prompt,
             Command:             command,
             Arguments:           arguments.ToArray(),
             TimeoutMilliseconds: ResolveTimeoutMilliseconds(spec?.TimeoutSeconds));
@@ -371,7 +378,8 @@ public class SubagentService
         SubagentTaskKind TaskKind,
         string           Command,
         string[]         Arguments,
-        int              TimeoutMilliseconds);
+        int              TimeoutMilliseconds,
+        string?          StdinPayload = null);
 
     private sealed record SubagentTaskSpec(
         SubagentTaskKind Kind,

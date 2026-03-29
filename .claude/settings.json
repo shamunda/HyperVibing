@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -ExecutionPolicy Bypass -File \u0022C:\\Users\\shamu\\.watchdog\\hooks\\pre-tool-use.ps1\u0022"
+          }
+        ]
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -ExecutionPolicy Bypass -File \u0022C:\\Users\\shamu\\.watchdog\\hooks\\post-tool-use.ps1\u0022"
+          }
+        ]
+      }
+    ]
+  }
+}

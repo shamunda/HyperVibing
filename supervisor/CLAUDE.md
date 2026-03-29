@@ -36,8 +36,9 @@ When you begin a session:
 ## Available Tools
 
 ### Observe
+
 | Tool | Purpose |
-|---|---|
+| --- | --- |
 | `watchdog_get_status` | Health snapshot of all or one project |
 | `watchdog_read_stream` | Read tool-use events since a cursor |
 | `watchdog_list_projects` | List registered projects |
@@ -50,8 +51,9 @@ When you begin a session:
 | `watchdog_read_job_artifact` | Read a worker job's artifact output |
 
 ### Intervene
+
 | Tool | Purpose |
-|---|---|
+| --- | --- |
 | `watchdog_send_nudge` | Send a message to a project's mailbox (consumes one budget credit) |
 | `watchdog_add_project` | Register a new project |
 | `watchdog_install_hooks` | Install hooks in a project's `.claude/` config |
@@ -62,8 +64,9 @@ When you begin a session:
 | `watchdog_smoke_test_worker` | Launch a live Claude worker smoke test for a project |
 
 ### Deliberate (Phase 2)
+
 | Tool | Purpose |
-|---|---|
+| --- | --- |
 | `watchdog_deliberate` | Run one deliberation cycle — returns per-project recommendations (does NOT send nudges) |
 | `watchdog_act_on_decision` | Run deliberation and auto-send nudges for all `Nudge` decisions in one call |
 | `watchdog_reset_budget` | Reset session nudge budget to the configured maximum |
@@ -75,14 +78,14 @@ When you begin a session:
 Users can issue these slash commands in the supervisor session:
 
 | Command | Action |
-|---|---|
-| `/status` | Call `watchdog_get_status` and print a formatted summary |
-| `/add <name> <path>` | Register a project and install its hooks |
-| `/nudge <project> <message>` | Manually send a nudge |
-| `/stream <project> [cursor]` | Read and display recent stream events |
-| `/self-report` | Generate session summary with `watchdog_self_report` |
-| `/patterns [project]` | Show crystallized strategy patterns with `watchdog_get_patterns` |
-| `/alerts <project>` | Show safety alerts with `watchdog_get_alerts` |
+| --- | --- |
+| `/watchdog.status [project]` | Call `watchdog_get_status` and print a formatted summary |
+| `/watchdog.add <name> <path>` | Register a project and install its hooks |
+| `/watchdog.nudge <project> <message>` | Manually send a nudge |
+| `/watchdog.stream <project> [cursor]` | Read and display recent stream events |
+| `/watchdog.self-report` | Generate session summary with `watchdog_self_report` |
+| `/watchdog.patterns [project]` | Show crystallized strategy patterns with `watchdog_get_patterns` |
+| `/watchdog.alerts <project>` | Show safety alerts with `watchdog_get_alerts` |
 | `/watchdog.jobs <project>` | Show recent worker jobs for a project |
 | `/watchdog.artifact <project> <job-id>` | Read a worker job artifact |
 | `/watchdog.policy <project>` | Show the current review and worker policy |
@@ -97,7 +100,7 @@ Users can issue these slash commands in the supervisor session:
 Choose the tone that fits the situation:
 
 | Tone | When to use |
-|---|---|
+| --- | --- |
 | `reminder` | Agent appears to have paused; no clear reason. Default first nudge. |
 | `redirect` | Agent is working but seems to be going in the wrong direction. |
 | `escalation` | Agent has been stalled for a long time or has missed prior nudges. |
@@ -107,6 +110,7 @@ Choose the tone that fits the situation:
 ## Safety Rules
 
 Never send a nudge that:
+
 - Contains instructions to delete files, drop databases, or run destructive commands.
 - Bypasses git hooks or commit signing (`--no-verify`, `--no-gpg-sign`).
 - Instructs the project agent to push to main/master without user confirmation.

@@ -29,7 +29,7 @@ public record WorkerBackendPolicy
     public string? ClaudeEffort            { get; init; } = "medium";
     public string? ClaudeAgent             { get; init; }
     public string PermissionMode           { get; init; } = "plan";
-    public bool UseBareMode                { get; init; } = true;
+    public bool UseBareMode                { get; init; } = false;
     public bool DisableSessionPersistence  { get; init; } = true;
     public decimal? MaxBudgetUsd           { get; init; }
     public string[] AllowedTools           { get; init; } = ["Read", "Grep", "LS", "Glob"];

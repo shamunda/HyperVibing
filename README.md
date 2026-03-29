@@ -46,6 +46,7 @@ This builds the server, copies hooks/config to `~/.watchdog/`, and registers the
 ### Supervisor Mode
 
 Open Claude Code in the `supervisor/` folder. It will use `CLAUDE.md` for its persona and can:
+
 - Check project status
 - Read event streams
 - Inspect job history and job artifacts
@@ -67,7 +68,13 @@ Watchdog now exposes a fuller control plane:
 
 The repo now ships first-class supervisor commands under `.claude/commands/`:
 
+- `/watchdog.add <name> <path>`
+- `/watchdog.nudge <project> <message>`
 - `/watchdog.status`
+- `/watchdog.stream <project> [cursor]`
+- `/watchdog.self-report`
+- `/watchdog.patterns [project]`
+- `/watchdog.alerts <project>`
 - `/watchdog.jobs <project>`
 - `/watchdog.artifact <project> <job-id>`
 - `/watchdog.policy <project>`
@@ -91,6 +98,7 @@ Each project now carries a persisted workflow policy in the registry. The policy
 
 - whether fresh tests are required before review
 - whether a fresh build is required before review
+- whether critical alerts block review
 - whether warning alerts block review
 - how long verification evidence stays fresh
 - whether subagent jobs default to the command backend or Claude backend
@@ -98,7 +106,7 @@ Each project now carries a persisted workflow policy in the registry. The policy
 
 ## Project Structure
 
-```
+```text
 config/          Default settings and project registry
 hooks/           Pre/post tool-use hooks + git safety hooks
 src/             .NET 9 MCP server (C#)
@@ -117,7 +125,7 @@ install.ps1      One-step installer
 Settings live in `~/.watchdog/config/settings.json`:
 
 | Setting | Default | Description |
-|---------|---------|-------------|
+| ------- | ------- | ----------- |
 | `stall_threshold_seconds` | 60 | Seconds idle before stall alert |
 | `session_budget` | 5 | Nudges available per supervisor session |
 | `subagent_timeout_seconds` | 180 | Default timeout for bounded subagent jobs |

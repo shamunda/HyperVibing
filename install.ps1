@@ -10,7 +10,7 @@
       2. Builds and publishes the .NET MCP server to ~/.watchdog/server/
       3. Copies hooks to ~/.watchdog/hooks/
       4. Copies config defaults to ~/.watchdog/config/ (preserves existing)
-      5. Registers the MCP server in ~/.claude/mcp.json
+      5. Registers the MCP server via "claude mcp add --scope user"
       6. Prints next steps
 #>
 # ──────────────────────────────────────────────────────────────────
@@ -26,7 +26,6 @@ $ErrorActionPreference = 'Stop'
 
 $WatchdogHome = Join-Path $HOME '.watchdog'
 $ClaudeDir    = Join-Path $HOME '.claude'
-$McpJson      = Join-Path $ClaudeDir 'mcp.json'
 $PkgRoot      = $PSScriptRoot
 
 function Write-Step  ($msg) { Write-Host "  $msg" }
@@ -152,34 +151,20 @@ function Copy-Config {
 # ── Step 5: Register MCP server ────────────────────────────────────────────
 
 function Register-McpServer {
-    Write-Step 'Registering Watchdog in ~/.claude/mcp.json ...'
-
-    New-Item -ItemType Directory -Path $ClaudeDir -Force | Out-Null
+    Write-Step 'Registering Watchdog MCP server (user scope)...'
 
     $serverDll = Join-Path $WatchdogHome 'server' 'Watchdog.Server.dll'
-    $entry = @{
-        type    = 'stdio'
-        command = 'dotnet'
-        args    = @($serverDll)
+
+    # Check if already registered (claude mcp list parses cleanly)
+    $existing = & claude mcp list 2>&1 | Select-String 'watchdog'
+    if ($existing) {
+        Write-Step '  Already registered — updating entry...'
+        & claude mcp remove watchdog 2>&1 | Out-Null
     }
 
-    $config = if (Test-Path $McpJson) {
-        try { Get-Content $McpJson -Raw | ConvertFrom-Json -AsHashtable } catch { @{} }
-    } else { @{} }
-
-    if (-not $config.ContainsKey('mcpServers')) { $config['mcpServers'] = @{} }
-
-    $already = $config['mcpServers'].ContainsKey('watchdog') -and
-               $config['mcpServers']['watchdog'].args -contains $serverDll
-
-    if ($already) {
-        Write-Ok 'MCP server already registered (no changes)'
-        return
-    }
-
-    $config['mcpServers']['watchdog'] = $entry
-    $config | ConvertTo-Json -Depth 10 | Set-Content $McpJson -Encoding UTF8
-    Write-Ok 'MCP server registered'
+    & claude mcp add --transport stdio --scope user watchdog -- dotnet $serverDll
+    if ($LASTEXITCODE -ne 0) { Write-Fail 'Failed to register MCP server. Is Claude Code CLI installed?' }
+    Write-Ok 'MCP server registered in ~/.claude.json (user scope)'
 }
 
 # ── Step 6: Next steps ─────────────────────────────────────────────────────
@@ -190,22 +175,17 @@ function Write-NextSteps {
     Write-Hr
     Write-Host '  Next steps:'
     Write-Hr
-    Write-Host '  1. Start a new Claude Code session — Watchdog loads automatically.'
-    Write-Host '  2. Register your first project (use these MCP tools in Claude):'
+    Write-Host '  1. Start a Claude session anywhere: claude --dangerously-skip-permissions'
+    Write-Host '  2. Register your project and install hooks (say this to Claude):'
     Write-Hr
-    Write-Host '       watchdog_add_project'
-    Write-Host '         name: "my-project"'
-    Write-Host '         path: "C:\path\to\your\project"'
+    Write-Host '       /watchdog.add'
     Write-Hr
-    Write-Host '  3. Install hooks in the project:'
-    Write-Hr
-    Write-Host '       watchdog_install_hooks'
-    Write-Host '         project: "my-project"'
-    Write-Hr
-    Write-Host '  4. Open Claude Code in your project — monitoring begins.'
+    Write-Host '  3. Exit that Claude session.'
+    Write-Host '  4. Open a new Claude session inside your project directory.'
+    Write-Host '  5. Begin working — Watchdog monitoring is active from session start.'
     Write-Hr
     Write-Host "  Watchdog home : $WatchdogHome"
-    Write-Host "  MCP config    : $McpJson"
+    Write-Host "  MCP config    : $env:USERPROFILE\.claude.json (user scope)"
     Write-Hr
 }
 

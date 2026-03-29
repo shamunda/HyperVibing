@@ -17,7 +17,7 @@ public class HookInstaller
 {
     private const string PsExecutable = "pwsh";
 
-    public string Install(string projectName)
+    public InstallResult Install(string projectName)
     {
         var project = ProjectRegistry.Get(projectName)
             ?? throw new InvalidOperationException($"Project \"{projectName}\" is not registered.");
@@ -28,17 +28,47 @@ public class HookInstaller
         if (!File.Exists(preHook) || !File.Exists(postHook))
             throw new FileNotFoundException($"Hook scripts not found in {Paths.Hooks}. Run the Watchdog installer first.");
 
+        // Claude Code hooks → .claude/settings.json
         var settingsPath = Path.Combine(project.Path, ".claude", "settings.json");
         Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
 
         var existing = LoadExistingSettings(settingsPath);
         existing["hooks"] = BuildHooksConfig(preHook, postHook);
-
         File.WriteAllText(settingsPath, JsonSerializer.Serialize(existing, JsonOptions.Indented));
+
+        // Git hooks → .git/hooks/
+        var gitHooksInstalled = InstallGitHooks(project.Path);
+
         ProjectRegistry.MarkHooksInstalled(projectName);
 
-        return settingsPath;
+        return new InstallResult(settingsPath, gitHooksInstalled);
     }
+
+    private bool InstallGitHooks(string projectPath)
+    {
+        var gitHooksDir = Path.Combine(projectPath, ".git", "hooks");
+        if (!Directory.Exists(gitHooksDir)) return false;
+
+        foreach (var hookName in new[] { "pre-commit", "pre-push" })
+        {
+            var src = Path.Combine(Paths.Hooks, hookName);
+            if (!File.Exists(src)) continue;
+
+            var dst = Path.Combine(gitHooksDir, hookName);
+            File.Copy(src, dst, overwrite: true);
+
+            // Make executable on Unix-like systems
+            if (!OperatingSystem.IsWindows())
+            {
+                try { File.SetUnixFileMode(dst, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute); }
+                catch { /* best effort */ }
+            }
+        }
+
+        return true;
+    }
+
+    public sealed record InstallResult(string SettingsPath, bool GitHooksInstalled);
 
     private static Dictionary<string, object> LoadExistingSettings(string path)
     {

@@ -84,7 +84,7 @@ public class SubagentServiceTests : TestFixture
         Assert.Contains("--print", preview.Arguments);
         Assert.Contains("--model", preview.Arguments);
         Assert.Contains("sonnet", preview.Arguments);
-        Assert.Contains("Review the current diff for regressions.", preview.Arguments);
+        Assert.DoesNotContain("Review the current diff for regressions.", preview.Arguments);
     }
 
     private Watchdog.Server.Models.SubagentJob WaitForJob(string project, string jobId)
