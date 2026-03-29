@@ -5,6 +5,8 @@ obj/
 # Watchdog runtime data — never commit
 data/
 *.lock
+/.watchdog
+/HANDOFF.md
 
 # Environment
 .env
