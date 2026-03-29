@@ -12,6 +12,7 @@ An MCP server that monitors and supervises Claude Code sessions. Watchdog runs i
 - **Budget Tracking** — Monitors token spend per session with configurable limits
 - **Workflow + Evidence Gating** — Tracks whether a project is implementing, validating, refining, or review-ready based on real verification evidence
 - **Bounded Subagent Jobs** — Runs tests, builds, diff analysis, and Claude worker tasks as tracked jobs with artifacts
+- **SQLite Control Plane** — Stores projects, streams, alerts, jobs, mailbox state, episodes, reflections, and learned patterns in an embedded SQLite database with backup-based recovery
 - **Secret Detection** — Git pre-commit/pre-push hooks block commits containing API keys, tokens, or passwords
 - **Multi-Project** — Monitor multiple Claude Code sessions from one supervisor
 - **Adaptive Learning** — Builds strategy profiles per project using EMA-smoothed metrics
@@ -92,6 +93,33 @@ Subagent jobs now support two backend styles:
 
 Projects can choose their default backend in project policy. A repo can stay command-first, or switch to Claude-backed workers for review and analysis tasks.
 
+## Runtime Persistence
+
+Watchdog now uses a hybrid runtime model:
+
+- Control-plane state lives in `~/.watchdog/watchdog.db` (SQLite)
+- Backups live in `~/.watchdog/backups/`
+- Worker stdout/stderr artifacts remain on disk under `~/.watchdog/jobs/<project>/artifacts/`
+
+On first boot, Watchdog imports legacy JSON and JSONL runtime state into SQLite. On corruption, it quarantines the primary database and restores from the latest backup, falling back to a recovered database copy when the primary file cannot be replaced in-process.
+
+## Hook Runtime
+
+The Claude Code hooks no longer mutate stream and mailbox files directly. Instead, the hook scripts invoke the published Watchdog server in CLI hook mode:
+
+- `hook-pre-tool-use` reads the next queued mailbox message from SQLite and emits the injected reminder text
+- `hook-post-tool-use` ingests the structured tool-use event into SQLite and runs immediate safety evaluation
+
+This keeps the app as the single authority for runtime state instead of splitting logic between PowerShell file writes and server-side reads.
+
+## Safety Model
+
+Safety evaluation is now structured and tool-aware instead of raw regex matching over every event payload.
+
+- Terminal commands are tokenized and classified semantically for operations like force-push, hard reset, forced clean, and broad recursive deletes
+- File mutation tools are inspected as structured writes so likely secrets are detected from assignment context and token shape rather than broad text matching
+- Alerts are persisted immediately during hook ingestion, and critical findings still auto-escalate through Watchdog nudges
+
 ## Project Workflow Policy
 
 Each project now carries a persisted workflow policy in the registry. The policy controls:
@@ -111,7 +139,7 @@ config/          Default settings and project registry
 hooks/           Pre/post tool-use hooks + git safety hooks
 src/             .NET 9 MCP server (C#)
   Watchdog.Server/
-    Lib/         Data stores (episodes, streams, mailbox, etc.)
+    Lib/         Persistence, bootstrap, recovery, and shared runtime utilities
     Models/      DTOs and domain types
     Services/    Business logic (urgency, nudge, safety, budget, etc.)
     Tools/       MCP tool definitions (observe, intervene, loop)
@@ -131,6 +159,17 @@ Settings live in `~/.watchdog/config/settings.json`:
 | `subagent_timeout_seconds` | 180 | Default timeout for bounded subagent jobs |
 | `evidence_freshness_minutes` | 30 | Default freshness window for verification evidence |
 | `auto_loop_interval_seconds` | 30 | How often the watch loop checks |
+
+## Validation
+
+Current automated baseline:
+
+```powershell
+dotnet test tests\Watchdog.Tests\Watchdog.Tests.csproj --nologo
+```
+
+- total tests: 61
+- failed: 0
 
 ## License
 
